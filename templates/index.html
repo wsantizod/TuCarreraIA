@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareerAI — Recomendación Vocacional</title>
+<style>
+  /* ── RESET & BASE ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent:   #64B4FF;
+    --accent2:  #A5D8FF;
+    --green:    #34C759;
+    --gray:     #8E9BAE;
+    --bg1:      #0a0f1e;
+    --bg2:      #060c1a;
+    --glass-bg: rgba(255,255,255,0.07);
+    --glass-bd: rgba(255,255,255,0.14);
+    --glass-hi: rgba(255,255,255,0.22);
+    --text:     #ffffff;
+    --text-dim: #8E9BAE;
+    --r:        20px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+                 'Segoe UI', sans-serif;
+    background: var(--bg1);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── FONDO ANIMADO ───────────────────────────────────────── */
+  .bg-orbs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+  }
+  .orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(80px); opacity: 0.35;
+    animation: drift 18s ease-in-out infinite;
+  }
+  .orb1 { width:55vw; height:55vw; top:-10%; left:-10%;
+           background: radial-gradient(circle, #3a7bd5, transparent 70%);
+           animation-delay: 0s; }
+  .orb2 { width:40vw; height:40vw; bottom:-5%; right:-5%;
+           background: radial-gradient(circle, #7c3aed, transparent 70%);
+           animation-delay: -6s; }
+  .orb3 { width:30vw; height:30vw; top:40%; left:50%;
+           background: radial-gradient(circle, #00c2e0, transparent 70%);
+           animation-delay: -12s; }
+
+  @keyframes drift {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%      { transform: translate(4%,3%) scale(1.05); }
+    66%      { transform: translate(-3%,5%) scale(0.97); }
+  }
+
+  /* ── LAYOUT ──────────────────────────────────────────────── */
+  .page {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
+  }
+
+  /* ── GLASS CARD ──────────────────────────────────────────── */
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-bd);
+    border-radius: var(--r);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow:
+      0 0 0 0.5px rgba(255,255,255,0.08) inset,
+      0 20px 60px rgba(0,0,0,0.5),
+      0 1px 0 rgba(255,255,255,0.12) inset;
+  }
+
+  /* ── PANTALLA BIENVENIDA ─────────────────────────────────── */
+  #screen-welcome {
+    max-width: 520px; width: 100%;
+    padding: 48px 40px;
+    text-align: center;
+  }
+  .logo-ring {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--glass-bd);
+    background: var(--glass-bg);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    position: relative;
+  }
+  .logo-ring svg { width: 36px; height: 36px; }
+  .logo-ring::before {
+    content: '';
+    position: absolute; inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(100,180,255,0.3);
+    animation: pulse-ring 2.4s ease-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    100% { transform: scale(1.4); opacity: 0;   }
+  }
+  #screen-welcome h1 {
+    font-size: 2.2rem; font-weight: 700; letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  #screen-welcome p {
+    color: var(--text-dim); font-size: 0.95rem; margin-bottom: 28px;
+  }
+  .chips {
+    display: flex; gap: 10px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 32px;
+  }
+  .chip {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-bd);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.8rem; color: var(--text-dim);
+  }
+
+  /* ── BOTONES ─────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 14px 28px;
+    border-radius: 14px; border: 1px solid var(--glass-bd);
+    background: var(--glass-bg);
+    color: var(--text); font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-decoration: none;
+  }
+  .btn:hover { background: rgba(255,255,255,0.13); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000; font-weight: 700;
+    box-shadow: 0 4px 20px rgba(100,180,255,0.35);
+  }
+  .btn-accent:hover {
+    background: var(--accent2); border-color: var(--accent2);
+    box-shadow: 0 6px 28px rgba(100,180,255,0.5);
+  }
+  .btn-sm { padding: 10px 20px; font-size: 0.88rem; border-radius: 12px; }
+  .btn:disabled, .btn[disabled] {
+    opacity: 0.35; cursor: not-allowed; transform: none;
+    box-shadow: none;
+  }
+
+  /* ── PANTALLA TEST ───────────────────────────────────────── */
+  #screen-test { width: 100%; max-width: 720px; }
+
+  .progress-bar-wrap {
+    height: 4px; background: rgba(255,255,255,0.1);
+    border-radius: 999px; margin-bottom: 28px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+
+  .q-card { padding: 36px 40px; }
+  .q-meta {
+    font-size: 0.78rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+  .q-icon {
+    font-size: 1.8rem; margin-bottom: 14px; display: block;
+  }
+  .q-text {
+    font-size: 1.15rem; font-weight: 600;
+    line-height: 1.5; margin-bottom: 28px;
+  }
+
+  /* Opciones */
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .opt {
+    padding: 14px 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    cursor: pointer; font-size: 0.95rem; font-weight: 500;
+    transition: all 0.18s ease;
+    text-align: left; color: var(--text);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .opt:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+  .opt.selected {
+    background: rgba(100,180,255,0.18);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .opt .opt-dot {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.3);
+    transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .opt.selected .opt-dot {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .opt.selected .opt-dot::after {
+    content: ''; width: 7px; height: 7px;
+    background: #000; border-radius: 50%;
+  }
+
+  /* Nav */
+  .q-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 40px 28px;
+  }
+
+  /* ── PANTALLA RESULTADOS ─────────────────────────────────── */
+  #screen-results { width: 100%; max-width: 720px; }
+  .r-card { padding: 36px 40px; }
+
+  .r-top-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(100,180,255,0.12);
+    border: 1px solid rgba(100,180,255,0.3);
+    border-radius: 999px; padding: 8px 18px;
+    font-size: 0.88rem; color: var(--accent2); margin-bottom: 20px;
+  }
+  .r-top-badge span { font-weight: 700; color: #fff; }
+
+  h2.section-title {
+    font-size: 1.6rem; font-weight: 700; margin-bottom: 6px;
+  }
+  .section-sub {
+    color: var(--text-dim); font-size: 0.9rem; margin-bottom: 28px;
+  }
+
+  /* Barras */
+  .bar-section-label {
+    font-size: 0.75rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    margin: 28px 0 12px;
+  }
+  .bar-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+  }
+  .bar-label { width: 210px; flex-shrink: 0; font-size: 0.88rem; text-align: right; }
+  .bar-track {
+    flex: 1; height: 22px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 6px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 6px; width: 0%;
+    transition: width 0.8s cubic-bezier(.4,0,.2,1);
+  }
+  .bar-pct { width: 48px; font-size: 0.88rem; font-weight: 700; }
+
+  /* Radar */
+  .radar-wrap {
+    display: flex; justify-content: center; padding: 12px 0;
+  }
+  #radar-canvas { max-width: 320px; width: 100%; }
+
+  /* Top 3 cards */
+  .top3 { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .top3-card {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+  }
+  .top3-badge {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 800; flex-shrink: 0; color: #000;
+  }
+  .top3-info { flex: 1; }
+  .top3-name { font-weight: 700; font-size: 0.97rem; }
+  .top3-sub  { font-size: 0.82rem; color: var(--text-dim); margin-top: 2px; }
+
+  /* ── LOADER ──────────────────────────────────────────────── */
+  #loader {
+    display: none; position: fixed; inset: 0; z-index: 99;
+    background: rgba(10,15,30,0.85);
+    backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── UTILIDADES ──────────────────────────────────────────── */
+  .hidden   { display: none !important; }
+  .mt-8     { margin-top: 8px; }
+  .mt-16    { margin-top: 16px; }
+  .text-dim { color: var(--text-dim); }
+  .fw-700   { font-weight: 700; }
+  .w-full   { width: 100%; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .q-card, .r-card { padding: 24px 20px; }
+    .q-nav { padding: 16px 20px 20px; }
+    .bar-label { width: 130px; font-size: 0.78rem; }
+    h2.section-title { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Fondo animado -->
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="spinner"></div>
+  <p style="color:var(--text-dim);font-size:0.9rem">Analizando tu perfil…</p>
+</div>
+
+<!-- ── BIENVENIDA ───────────────────────────────────────────── -->
+<div class="page" id="page-welcome">
+  <div id="screen-welcome" class="glass">
+
+    <div class="logo-ring">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="15" stroke="#64B4FF" stroke-width="2"/>
+        <line id="needle-n" x1="18" y1="18" x2="18" y2="6"
+              stroke="#FF453A" stroke-width="2.5" stroke-linecap="round"/>
+        <line id="needle-s" x1="18" y1="18" x2="18" y2="28"
+              stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="18" cy="18" r="3" fill="#64B4FF"/>
+      </svg>
+    </div>
+
+    <h1>CareerAI</h1>
+    <p>Sistema Inteligente de Recomendación Vocacional<br>
+       basado en Machine Learning</p>
+
+    <div class="chips">
+      <span class="chip">📋 21 preguntas</span>
+      <span class="chip">⏱ ~5 minutos</span>
+      <span class="chip">🤖 Random Forest</span>
+      <span class="chip">🎓 14 carreras</span>
+    </div>
+
+    {% if not modelo_ok %}
+    <p style="color:#FF453A;font-size:0.85rem;margin-bottom:16px;">
+      ⚠ Ejecuta <code>python generar_modelo.py</code> primero
+    </p>
+    {% endif %}
+
+    <button class="btn btn-accent w-full" id="btn-start"
+            {% if not modelo_ok %}disabled{% endif %}>
+      Comenzar test &nbsp;→
+    </button>
+  </div>
+</div>
+
+<!-- ── TEST ─────────────────────────────────────────────────── -->
+<div class="page hidden" id="page-test">
+  <div id="screen-test">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="glass">
+      <div class="q-card" id="q-card">
+        <!-- Contenido dinámico -->
+      </div>
+      <div class="q-nav">
+        <button class="btn btn-sm" id="btn-prev">← Anterior</button>
+        <button class="btn btn-sm btn-accent" id="btn-next" disabled>
+          Siguiente →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESULTADOS ────────────────────────────────────────────── -->
+<div class="page hidden" id="page-results">
+  <div id="screen-results">
+    <div class="glass r-card" id="r-card">
+      <!-- Contenido dinámico -->
+    </div>
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn" id="btn-restart">Realizar test nuevamente</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PREGUNTAS (21 = 8 variables × ~2-3 preguntas c/u) ──────────────────────
+const PREGUNTAS = [
+  // logica_matematica
+  { texto:"¿Qué tan fácil te resulta resolver problemas matemáticos o de lógica?",
+    variable:"logica_matematica", icono:"∑",
+    opciones:["Muy difícil","Difícil","Normal","Fácil","Muy fácil"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Disfrutas analizar datos, estadísticas o patrones numéricos?",
+    variable:"logica_matematica", icono:"◈",
+    opciones:["Nada","Poco","Algo","Bastante","Mucho"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Prefieres soluciones lógicas y estructuradas ante un problema?",
+    variable:"logica_matematica", icono:"⬡",
+    opciones:["Nunca","Pocas veces","A veces","Frecuentemente","Siempre"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // creatividad
+  { texto:"¿Con qué frecuencia generas ideas originales o soluciones novedosas?",
+    variable:"creatividad", icono:"✦",
+    opciones:["Raramente","Pocas veces","Ocasionalmente","Seguido","Constantemente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Te resulta natural imaginar y diseñar cosas completamente nuevas?",
+    variable:"creatividad", icono:"◎",
+    opciones:["Para nada","Poco","Regular","Bastante","Totalmente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // habilidad_social
+  { texto:"¿Qué tan cómodo te sientes trabajando con personas y en equipo?",
+    variable:"habilidad_social", icono:"⬭",
+    opciones:["Muy incómodo","Incómodo","Neutral","Cómodo","Muy cómodo"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Te gusta ayudar a otros a resolver sus problemas personales o emocionales?",
+    variable:"habilidad_social", icono:"◉",
+    opciones:["Nada","Poco","Regular","Bastante","Mucho"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Con qué facilidad te expresas y comunicas ante grupos de personas?",
+    variable:"habilidad_social", icono:"⬟",
+    opciones:["Con mucha dificultad","Con dificultad","Normal","Con facilidad","Con mucha facilidad"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // interes_ciencias
+  { texto:"¿Qué tan interesado estás en las ciencias naturales (biología, química, física)?",
+    variable:"interes_ciencias", icono:"⚗",
+    opciones:["Nada","Poco","Regular","Bastante","Apasionado"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Disfrutas experimentar, investigar o descubrir cómo funcionan las cosas?",
+    variable:"interes_ciencias", icono:"🔬",
+    opciones:["Para nada","Poco","Regular","Bastante","Totalmente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // interes_arte
+  { texto:"¿Qué tanto te atrae el arte visual, la música, el teatro o el diseño?",
+    variable:"interes_arte", icono:"◎",
+    opciones:["Nada","Poco","Regular","Bastante","Mucho"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Eres sensible a los detalles estéticos como colores, formas y composición?",
+    variable:"interes_arte", icono:"❋",
+    opciones:["Para nada","Poco","Moderadamente","Bastante","Muy sensible"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // interes_tecnologia  ← NUEVA
+  { texto:"¿Qué tanto te interesa la programación, los sistemas o el desarrollo de software?",
+    variable:"interes_tecnologia", icono:"</> ",
+    opciones:["Nada","Poco","Moderado","Bastante","Me apasiona"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Disfrutas usar, configurar o entender cómo funcionan los dispositivos y sistemas tecnológicos?",
+    variable:"interes_tecnologia", icono:"⚙",
+    opciones:["Para nada","Poco","Regular","Bastante","Totalmente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Te gustaría desarrollar aplicaciones, sitios web o soluciones digitales?",
+    variable:"interes_tecnologia", icono:"▣",
+    opciones:["Nada","Poco","Tal vez","Bastante","Definitivamente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // liderazgo_organizacion  ← NUEVA
+  { texto:"¿Con qué frecuencia tomas la iniciativa para organizar proyectos o grupos?",
+    variable:"liderazgo_organizacion", icono:"◈",
+    opciones:["Nunca","Raramente","A veces","Frecuentemente","Siempre"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Te sientes cómodo tomando decisiones importantes que afectan a otros?",
+    variable:"liderazgo_organizacion", icono:"✦",
+    opciones:["Muy incómodo","Incómodo","Neutral","Cómodo","Muy cómodo"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Disfrutas planificar, organizar recursos y coordinar a otras personas?",
+    variable:"liderazgo_organizacion", icono:"⬡",
+    opciones:["Para nada","Poco","Regular","Bastante","Mucho"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  // interes_humanidades  ← NUEVA
+  { texto:"¿Qué tanto te interesan temas como historia, filosofía, sociología o cultura?",
+    variable:"interes_humanidades", icono:"⬟",
+    opciones:["Nada","Poco","Algo","Bastante","Mucho"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Disfrutas leer, debatir o analizar textos, leyes o argumentos complejos?",
+    variable:"interes_humanidades", icono:"◉",
+    opciones:["Para nada","Poco","Regular","Bastante","Totalmente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+  { texto:"¿Te interesa entender la conducta humana, las emociones y la psicología de las personas?",
+    variable:"interes_humanidades", icono:"◎",
+    opciones:["Nada","Poco","Algo","Bastante","Profundamente"],
+    valores:[1.5,3.5,5.5,7.5,9.5] },
+];
+
+const PALETTE = [
+  "#64B4FF","#34C759","#FF9F0A","#FF375F","#5E5CE6",
+  "#30D158","#FFD60A","#BF5AF2","#32ADE6","#FF6961",
+  "#E5C100","#63E6BE","#74C0FC","#FF8FAB",
+];
+
+const LABELS_MAP = {
+  logica_matematica:     "Lógica",
+  creatividad:           "Creatividad",
+  habilidad_social:      "Social",
+  interes_ciencias:      "Ciencias",
+  interes_arte:          "Arte",
+  interes_tecnologia:    "Tecnología",
+  liderazgo_organizacion:"Liderazgo",
+  interes_humanidades:   "Humanidades",
+};
+
+// ── ESTADO ──────────────────────────────────────────────────────────────────
+let idx         = 0;
+let respuestas  = {};   // { variable: [val, val, ...] }
+let selVal      = null;
+let selIdx      = null;
+
+// ── NAVEGACIÓN ───────────────────────────────────────────────────────────────
+function showPage(id) {
+  ['page-welcome','page-test','page-results'].forEach(p => {
+    document.getElementById(p).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  idx = 0; respuestas = {};
+  showPage('page-test');
+  renderPregunta();
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (selVal === null) return;
+  const p   = PREGUNTAS[idx];
+  if (!respuestas[p.variable]) respuestas[p.variable] = [];
+  respuestas[p.variable].push(selVal);
+
+  idx++;
+  if (idx < PREGUNTAS.length) {
+    selVal = null; selIdx = null;
+    renderPregunta();
+  } else {
+    enviarResultados();
+  }
+});
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (idx === 0) return;
+  // Revertir última respuesta
+  const prev = PREGUNTAS[idx - 1];
+  if (respuestas[prev.variable]?.length) respuestas[prev.variable].pop();
+  idx--;
+  selVal = null; selIdx = null;
+  renderPregunta();
+});
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  idx = 0; respuestas = {}; selVal = null; selIdx = null;
+  showPage('page-welcome');
+});
+
+// ── RENDER PREGUNTA ──────────────────────────────────────────────────────────
+function renderPregunta() {
+  const total = PREGUNTAS.length;
+  const p     = PREGUNTAS[idx];
+
+  // Barra de progreso
+  document.getElementById('progress-fill').style.width =
+    `${(idx / total) * 100}%`;
+
+  // Anterior
+  const btnPrev = document.getElementById('btn-prev');
+  btnPrev.style.visibility = idx === 0 ? 'hidden' : 'visible';
+
+  // Siguiente
+  const btnNext = document.getElementById('btn-next');
+  btnNext.disabled = true;
+  btnNext.textContent = idx < total - 1 ? 'Siguiente →' : 'Ver resultados ✦';
+  btnNext.classList.remove('btn-accent');
+
+  // Card
+  document.getElementById('q-card').innerHTML = `
+    <div class="q-meta">Pregunta ${idx+1} de ${total} &nbsp;·&nbsp; ${LABELS_MAP[p.variable]}</div>
+    <span class="q-icon">${p.icono}</span>
+    <div class="q-text">${p.texto}</div>
+    <div class="options" id="opts">
+      ${p.opciones.map((o, i) => `
+        <button class="opt" data-i="${i}" data-val="${p.valores[i]}">
+          <span class="opt-dot"></span> ${o}
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  document.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selVal = parseFloat(btn.dataset.val);
+      selIdx = parseInt(btn.dataset.i);
+      const next = document.getElementById('btn-next');
+      next.disabled = false;
+      next.classList.add('btn-accent');
+    });
+  });
+}
+
+// ── ENVIAR AL BACKEND ─────────────────────────────────────────────────────────
+async function enviarResultados() {
+  document.getElementById('loader').style.display = 'flex';
+
+  const res  = await fetch('/predecir', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ valores: respuestas })
+  });
+  const data = await res.json();
+  document.getElementById('loader').style.display = 'none';
+
+  if (data.error) { alert(data.error); return; }
+  renderResultados(data.resultados, data.perfil);
+  showPage('page-results');
+}
+
+// ── RENDER RESULTADOS ────────────────────────────────────────────────────────
+function renderResultados(top5, perfil) {
+  const top1 = top5[0];
+
+  let html = `
+    <div class="r-top-badge">
+      🎓 &nbsp; Perfil más afín: <span>${top1.carrera}</span>
+    </div>
+    <h2 class="section-title">Tus Resultados</h2>
+    <p class="section-sub">Basado en 8 dimensiones de tu perfil personal</p>
+
+    <div class="bar-section-label">Afinidad por carrera (top 5)</div>
+  `;
+
+  // Barras de afinidad
+  top5.forEach((item, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const rel   = (item.pct / top1.pct * 100).toFixed(1);
+    html += `
+      <div class="bar-row">
+        <div class="bar-label">${item.carrera}</div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="${rel}" style="background:${color}"></div>
+        </div>
+        <div class="bar-pct" style="color:${color}">${item.pct}%</div>
+      </div>
+    `;
+  });
+
+  // Radar
+  html += `
+    <div class="bar-section-label" style="margin-top:32px">Perfil de habilidades</div>
+    <div class="radar-wrap">
+      <canvas id="radar-canvas" width="320" height="300"></canvas>
+    </div>
+
+    <div class="bar-section-label">Top 3 carreras recomendadas</div>
+    <div class="top3">
+  `;
+
+  top5.slice(0,3).forEach((item, i) => {
+    const color = PALETTE[i];
+    html += `
+      <div class="top3-card">
+        <div class="top3-badge" style="background:${color}">${i+1}</div>
+        <div class="top3-info">
+          <div class="top3-name">${item.carrera}</div>
+          <div class="top3-sub">Afinidad: ${item.pct}%</div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  document.getElementById('r-card').innerHTML = html;
+
+  // Animar barras
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill').forEach(el => {
+      el.style.width = el.dataset.width + '%';
+    });
+  }, 80);
+
+  // Dibujar radar
+  setTimeout(() => drawRadar(perfil), 150);
+}
+
+// ── RADAR CHART (Canvas 2D) ───────────────────────────────────────────────────
+function drawRadar(perfil) {
+  const canvas = document.getElementById('radar-canvas');
+  if (!canvas) return;
+  const ctx  = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2 - 10, r = Math.min(W,H)*0.34;
+
+  const vars = Object.keys(LABELS_MAP);
+  const n    = vars.length;
+  const vals = vars.map(k => (perfil[k] || 5) / 10);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Anillos guía
+  [0.2, 0.4, 0.6, 0.8, 1.0].forEach(ring => {
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = (2*Math.PI*i/n) - Math.PI/2;
+      const x = cx + ring*r*Math.cos(a);
+      const y = cy + ring*r*Math.sin(a);
+      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Ejes
+  for (let i = 0; i < n; i++) {
+    const a = (2*Math.PI*i/n) - Math.PI/2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r*Math.cos(a), cy + r*Math.sin(a));
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Área del perfil
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = (2*Math.PI*i/n) - Math.PI/2;
+    const x = cx + vals[i]*r*Math.cos(a);
+    const y = cy + vals[i]*r*Math.sin(a);
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fillStyle   = 'rgba(100,180,255,0.18)';
+  ctx.strokeStyle = '#64B4FF';
+  ctx.lineWidth   = 2;
+  ctx.fill();
+  ctx.stroke();
+
+  // Puntos
+  for (let i = 0; i < n; i++) {
+    const a = (2*Math.PI*i/n) - Math.PI/2;
+    const x = cx + vals[i]*r*Math.cos(a);
+    const y = cy + vals[i]*r*Math.sin(a);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, 2*Math.PI);
+    ctx.fillStyle   = '#64B4FF';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth   = 1.5;
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Etiquetas
+  ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillStyle   = 'rgba(255,255,255,0.85)';
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const a = (2*Math.PI*i/n) - Math.PI/2;
+    const lx = cx + (r*1.26)*Math.cos(a);
+    const ly = cy + (r*1.26)*Math.sin(a);
+    const label = LABELS_MAP[vars[i]];
+    const val   = (perfil[vars[i]] || 5).toFixed(1);
+    ctx.fillText(label, lx, ly - 7);
+    ctx.fillStyle = 'rgba(142,155,174,0.9)';
+    ctx.fillText(val, lx, ly + 7);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  }
+}
+
+// ── ANIMACIÓN LOGO (aguja brújula) ────────────────────────────────────────────
+let logoAngle = 0;
+function animateLogo() {
+  logoAngle = (logoAngle + 1.5) % 360;
+  const rad = logoAngle * Math.PI / 180;
+  const cx = 18, cy = 18, r = 12;
+  const nx = cx + r * Math.sin(rad);
+  const ny = cy - r * Math.cos(rad);
+  const sx = cx - (r*0.8) * Math.sin(rad);
+  const sy = cy + (r*0.8) * Math.cos(rad);
+  const nn = document.getElementById('needle-n');
+  const ns = document.getElementById('needle-s');
+  if (nn) { nn.setAttribute('x2', nx); nn.setAttribute('y2', ny); }
+  if (ns) { ns.setAttribute('x2', sx); ns.setAttribute('y2', sy); }
+  requestAnimationFrame(animateLogo);
+}
+animateLogo();
+</script>
+</body>
+</html>
